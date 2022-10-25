@@ -1,0 +1,7 @@
+name: lib
+version: 0.1.0
+
+authors:
+  - initdc <initd@outlook.com>
+
+crystal: 1.6.1

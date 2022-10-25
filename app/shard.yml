@@ -1,0 +1,11 @@
+name: app
+version: 0.1.0
+
+authors:
+  - initdc <initd@outlook.com>
+
+targets:
+  app:
+    main: src/app.cr
+
+crystal: 1.6.1

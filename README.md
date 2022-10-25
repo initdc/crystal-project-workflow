@@ -1,12 +1,12 @@
-# [Zig Project Workflow](https://github.com/initdc/zig-project-workflow)
+# [Crystal Project Workflow](https://github.com/initdc/crystal-project-workflow)
 
-> Project written by zig, you just need build once time.
+> Project written by crystal, you just need build once time.
 
 ## Build on Linux Host
 
 1. deps 
 
-    - zig
+    - crystal
     - ruby
     - tree
     - sha256sum

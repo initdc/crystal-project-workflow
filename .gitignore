@@ -1,5 +1,14 @@
-zig-cache/
-zig-out/
-
 target
 upload
+
+a.out
+
+/docs/
+# /lib/
+/bin/
+/.shards/
+*.dwarf
+
+# Libraries don't need dependency lock
+# Dependencies will be locked in applications that use them
+/shard.lock

@@ -1,17 +1,17 @@
 require "./version"
 require "./get-version"
-require "./zig-test"
 
-PROGRAM = "zig-demo"
-# VERSION = "v0.0.1"
-BUILD_CMD = "zig build"
-OUTPUT_ARG = "-p"
+PROGRAM = "crystal-demo"
+# VERSION = "v0.1.0"
+BUILD_CMD = "crystal build"
+SRC_FILES = "app/src/*.cr"
+OUTPUT_ARG = "-o"
 RELEASE_BUILD = true
-RELEASE_ARG = RELEASE_BUILD == true ? "-Drelease" : ""
+RELEASE_ARG = RELEASE_BUILD == true ? "--release" : "--debug"
 RELEASE = RELEASE_BUILD == true ? "release" : "debug"
 # used in this way:
-# BUILD_CMD RELEASE_ARG TARGET_ARG OUTPUT_ARG OUTPUT_PATH
-TEST_CMD = "zig build"
+# BUILD_CMD SRC_FILES RELEASE_ARG TARGET_ARG OUTPUT_ARG OUTPUT_PATH
+TEST_CMD = "crystal spec"
 
 TARGET_DIR = "target"
 DOCKER_DIR = "docker"
@@ -46,92 +46,36 @@ GO_ZIG = {
 
 ARM = ["5", "6", "7"]
 
-# zig targets | jq -r .libc
-TARGETS = [
-    "aarch64_be-linux-gnu",
-    "aarch64_be-linux-musl",
-    "aarch64_be-windows-gnu",
+# https://crystal-lang.org/reference/1.6/syntax_and_semantics/platform_support.html
+TIER1 = [
+    "x86_64-darwin",
+    "x86_64-linux-gnu"
+]
+
+TIER2 = [
+    "aarch64-darwin",
     "aarch64-linux-gnu",
     "aarch64-linux-musl",
-    "aarch64-windows-gnu",
-    "aarch64-macos-none",
-    "armeb-linux-gnueabi",
-    "armeb-linux-gnueabihf",
-    "armeb-linux-musleabi",
-    "armeb-linux-musleabihf",
-    "armeb-windows-gnu",
-    "arm-linux-gnueabi",
     "arm-linux-gnueabihf",
-    "arm-linux-musleabi",
-    "arm-linux-musleabihf",
-    "thumb-linux-gnueabi",
-    "thumb-linux-gnueabihf",
-    "thumb-linux-musleabi",
-    "thumb-linux-musleabihf",
-    "arm-windows-gnu",
-    "csky-linux-gnueabi",
-    "csky-linux-gnueabihf",
     "i386-linux-gnu",
     "i386-linux-musl",
-    "i386-windows-gnu",
-    "m68k-linux-gnu",
-    "m68k-linux-musl",
-    "mips64el-linux-gnuabi64",
-    "mips64el-linux-gnuabin32",
-    "mips64el-linux-musl",
-    "mips64-linux-gnuabi64",
-    "mips64-linux-gnuabin32",
-    "mips64-linux-musl",
-    "mipsel-linux-gnueabi",
-    "mipsel-linux-gnueabihf",
-    "mipsel-linux-musl",
-    "mips-linux-gnueabi",
-    "mips-linux-gnueabihf",
-    "mips-linux-musl",
-    "powerpc64le-linux-gnu",
-    "powerpc64le-linux-musl",
-    "powerpc64-linux-gnu",
-    "powerpc64-linux-musl",
-    "powerpc-linux-gnueabi",
-    "powerpc-linux-gnueabihf",
-    "powerpc-linux-musl",
-    "riscv64-linux-gnu",
-    "riscv64-linux-musl",
-    "s390x-linux-gnu",
-    "s390x-linux-musl",
-    "sparc-linux-gnu",
-    "sparc64-linux-gnu",
-    "wasm32-freestanding-musl",
-    "wasm32-wasi-musl",
-    "x86_64-linux-gnu",
-    "x86_64-linux-gnux32",
     "x86_64-linux-musl",
-    "x86_64-windows-gnu",
-    "x86_64-macos-none",
+    "x86_64-openbsd",
+    "x86_64-freebsd"
 ]
 
-TEST_TARGETS = [
-    "aarch64-linux-gnu",
-    "aarch64-linux-musl",
-    "aarch64-windows-gnu",
-    "aarch64-macos-none",
-    "arm-linux-gnueabi",
-    "arm-linux-gnueabihf",
-    "arm-linux-musleabi",
-    "arm-linux-musleabihf",
-    "x86_64-linux-gnu",
-    "x86_64-linux-gnux32",
-    "x86_64-linux-musl",
-    "x86_64-windows-gnu",
-    "x86_64-macos-none",
+TIER3 = [
+    "x86_64-windows-msvc",
+    "x86_64-unknown-dragonfly",
+    "x86_64-unknown-netbsd",
+    "wasm32-unknown-wasi"
 ]
 
-LESS_TARGETS = [
-    "aarch64-linux-gnu",
-    "aarch64-linux-musl",
-    "x86_64-linux-gnu",
-    "x86_64-linux-musl",
-]
+TARGETS = TIER1 + TIER2 + TIER3
+
+TEST_TARGETS = TIER1 + TIER2
+
+LESS_TARGETS = TIER1
 
 version = get_version ARGV, 0, VERSION
 
@@ -146,10 +90,6 @@ catch_error = ARGV.include? "--catch-error" || false
 targets = TARGETS
 targets = TEST_TARGETS if test_bin
 targets = LESS_TARGETS if less_bin
-
-if run_test
-    zig_test catch_error
-end
 
 if clean_all
     doCleanAll
@@ -191,12 +131,14 @@ for target in targets
     program_bin = !windows ? PROGRAM : "#{PROGRAM}.exe"
     target_bin = !windows ? target : "#{target}.exe"
 
-    target_arg = "-Dtarget=#{target}"
-    cmd = "#{BUILD_CMD} #{RELEASE_ARG} #{target_arg} #{OUTPUT_ARG} #{TARGET_DIR}/#{target}/#{RELEASE}"
+    target_arg = "--cross-compile --target #{target}"
+    dir = "#{TARGET_DIR}/#{target}/#{RELEASE}"
+    `mkdir -p #{dir}`
+    cmd = "#{BUILD_CMD} #{SRC_FILES} #{RELEASE_ARG} #{target_arg} #{OUTPUT_ARG} #{dir}/#{PROGRAM}"
     puts cmd
     system cmd
 
-    existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/bin/#{program_bin}", "#{UPLOAD_DIR}/#{target_bin}"
+    existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/#{program_bin}", "#{UPLOAD_DIR}/#{target_bin}"
 end
 
 GO_ZIG.each do |target_platform, targets|
@@ -215,13 +157,13 @@ GO_ZIG.each do |target_platform, targets|
                     tg_array = target.split("-")
                     abi = tg_array.last
 
-                    existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/bin/#{PROGRAM}", "#{docker}/#{PROGRAM}-#{abi}"
+                    existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/#{PROGRAM}", "#{docker}/#{PROGRAM}-#{abi}"
                     Dir.chdir docker do
                         notExistsThen "ln -s", PROGRAM, "#{PROGRAM}-#{abi}"
                     end
                 end
             else
-                existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/bin/#{PROGRAM}", "#{docker}/#{PROGRAM}"
+                existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/#{PROGRAM}", "#{docker}/#{PROGRAM}"
             end
         end
     else
@@ -234,13 +176,13 @@ GO_ZIG.each do |target_platform, targets|
                 tg_array = target.split("-")
                 abi = tg_array.last
 
-                existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/bin/#{PROGRAM}", "#{docker}/#{PROGRAM}-#{abi}"
+                existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/#{PROGRAM}", "#{docker}/#{PROGRAM}-#{abi}"
                 Dir.chdir docker do
                     notExistsThen "ln -s", PROGRAM, "#{PROGRAM}-#{abi}"
                 end
             end
         else
-            existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/bin/#{PROGRAM}", "#{docker}/#{PROGRAM}"
+            existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/#{PROGRAM}", "#{docker}/#{PROGRAM}"
         end
     end
 end
