@@ -13,6 +13,8 @@ RELEASE = RELEASE_BUILD == true ? "release" : "debug"
 # BUILD_CMD SRC_FILES RELEASE_ARG TARGET_ARG OUTPUT_ARG OUTPUT_PATH
 TEST_CMD = "crystal spec"
 
+ZIG_CC = "zig cc -mcpu=baseline -target"
+
 TARGET_DIR = "target"
 DOCKER_DIR = "docker"
 UPLOAD_DIR = "upload"
@@ -134,7 +136,7 @@ for target in targets
     target_arg = "--cross-compile --target #{target}"
     dir = "#{TARGET_DIR}/#{target}/#{RELEASE}"
     `mkdir -p #{dir}`
-    cmd = "#{BUILD_CMD} #{SRC_FILES} #{RELEASE_ARG} #{target_arg} #{OUTPUT_ARG} #{dir}/#{PROGRAM}"
+    cmd = "export CC='#{ZIG_CC} #{target}' && #{BUILD_CMD} #{SRC_FILES} #{RELEASE_ARG} #{target_arg} #{OUTPUT_ARG} #{dir}/#{PROGRAM}"
     puts cmd
     system cmd
 
