@@ -1,7 +1,7 @@
 name: Merge or Pull requests
 
 env:
-  ZIG_VERSION: master
+  CR_VERSION: nightly
 
 on:
   workflow_dispatch:
@@ -15,19 +15,34 @@ concurrency:
   group: ${{ github.sha }}
   cancel-in-progress: false
 
+# https://crystal-lang.github.io/install-crystal/configurator.html
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: ubuntu-latest
+            crystal: nightly
+          - os: macos-latest
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set zig version  
-        uses: korandoru/setup-zig@v1
+      - name: Download source
+        uses: actions/checkout@v3
+      - name: Install Crystal
+        uses: crystal-lang/install-crystal@v1
         with:
-          zig-version: ${{ env.ZIG_VERSION }} 
-      - name: Build Artifact
-        run: ruby build.rb test --run-test
+          crystal: ${{ matrix.crystal }}
+      - name: Install shards
+        run: cd app; shards install
+      - name: Run tests
+        run: cd app; crystal spec --order=random
+      - name: Build
+        run: cd app; shards build
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          path: "upload/*"
+          name: ${{ matrix.os }}_${{ matrix.crystal || 'stable' }}
+          path: "app/bin/*"
