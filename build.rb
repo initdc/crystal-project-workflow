@@ -13,7 +13,7 @@ RELEASE = RELEASE_BUILD == true ? "release" : "debug"
 # BUILD_CMD SRC_FILES RELEASE_ARG TARGET_ARG OUTPUT_ARG OUTPUT_PATH
 TEST_CMD = "crystal spec"
 
-ZIG_CC = "zig cc -mcpu=baseline -target"
+ZIG_CC = "zig cc -target"
 
 TARGET_DIR = "target"
 DOCKER_DIR = "docker"
@@ -128,17 +128,32 @@ for target in targets
     tp_array = target.split("-")
     architecture = tp_array[0]
     os = tp_array[1]
+    abi = tp_array[2]
     windows = os == "windows"
     
     program_bin = !windows ? PROGRAM : "#{PROGRAM}.exe"
     target_bin = !windows ? target : "#{target}.exe"
 
+    zig_arch = architecture
+
+    zig_os = os
+    zig_os = "macos" if os == "darwin"
+
+    zig_abi = abi
+    zig_abi = "none" if abi.nil?
+
+    zig_target_arg = "#{zig_arch}-#{zig_os}-#{zig_abi}"
     target_arg = "--cross-compile --target #{target}"
+
     dir = "#{TARGET_DIR}/#{target}/#{RELEASE}"
     `mkdir -p #{dir}`
-    cmd = "export CC='#{ZIG_CC} #{target}' && #{BUILD_CMD} #{SRC_FILES} #{RELEASE_ARG} #{target_arg} #{OUTPUT_ARG} #{dir}/#{PROGRAM}"
+
+    cmd = "export CC='#{ZIG_CC} #{zig_target_arg}' && #{BUILD_CMD} #{SRC_FILES} #{RELEASE_ARG} #{target_arg} #{OUTPUT_ARG} #{dir}/#{PROGRAM}"
     puts cmd
-    system cmd
+
+    result = `#{cmd}`
+    puts result
+    puts
 
     existsThen "ln", "#{TARGET_DIR}/#{target}/#{RELEASE}/#{program_bin}", "#{UPLOAD_DIR}/#{target_bin}"
 end
